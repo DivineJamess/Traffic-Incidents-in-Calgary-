@@ -1,0 +1,390 @@
+---
+title: "602 Project R Notebook"
+output: html_notebook
+---
+
+
+PART 1
+
+```{r}
+
+# Load necessary libraries
+library(ggplot2)
+library(stats)
+
+# Load the dataset
+bonds_data <- read.csv("bondsdata.csv")
+
+```
+
+```{r}
+
+# Extract the first 14 records for 'season' and 'hrat'
+yeardata <- bonds_data$season[1:14] 
+hratdata <- bonds_data$hrat[1:14] 
+
+# Create a new dataframe with these columns
+bondsuseddata <- data.frame(yeardata, hratdata)
+
+#head(bondsuseddata, 5)
+
+```
+
+```{r}
+#linear model
+modelforbond = lm(hratdata ~ yeardata, data=bondsuseddata)
+summary(modelforbond)
+
+standard_error <- summary(modelforbond)$sigma
+print(standard_error)
+
+r_squared <- summary(modelforbond)$r.squared  
+print(r_squared)
+
+p_value <- summary(modelforbond)$coefficients[2,4]
+print(p_value)
+
+
+```
+
+$$
+\text{HRAT}_i = -7.992499 + (0.004044169 \times \text{Season}_i)
+$$
+
+```{r}
+
+cat("From the linear regression model, we can conclude that there is a significant positive relationship between the season(year) and the home runs ratio (hrat) of Barry Bonds. The season(year) explains a great portion of the variation in the home runs ratio (hrat). Also it is quite noting that the model fits the data relatively well as seen by the value of the r-squared (0.6370504 ie 63.71%) and with the overall model being statistically significant")
+
+```
+
+```{r}
+# Create a dataframe for diagnostic purposes
+dataplot <- data.frame(
+  Year = bondsuseddata$yeardata,
+  Fitted_Values = fitted(modelforbond),
+  Residuals = residuals(modelforbond),
+  Sqrt_Abs_Std_Residuals = sqrt(abs(rstandard(modelforbond)))
+)
+
+head(dataplot, 4)
+
+```
+
+
+```{r}
+
+# Residual Plot
+ggplot(data = dataplot, aes(x = Year, y = Sqrt_Abs_Std_Residuals)) + geom_point(color = 'blue', size = 2) + ggtitle("Residual Plot: Season(Year) to Sqrt(Abs(Standardized Residuals))") + stat_smooth(method = "lm", col = "red")
+
+
+cat("From the plot, the linear model is suitable for the data since it does not go against the assumptions of homoscedasticity and linearity. The plot also shows the residuals are randomly scattered around the smoothing line which goes to say that it supports the linear model being used for predicting the HRAT based on the season (year). It is also worth noting that there is no patterns in the plot and that should make us cautious and lead us to perform further checks to confirm that the model is valid.")
+
+
+```
+
+```{r}
+
+# QQ plot
+ggplot(dataplot, aes(sample = Residuals)) + stat_qq(size = 2, color = "blue") + geom_qq_line(color = "red") + ggtitle("Normal Probability Plot of the Residuals")
+
+cat("From the Normal probability plot, it shows that the linear regression model satisify the normality assumption to a reasonable degree. That shows that the model can be used to make inferences and the statistical tests related to the model are likely to be reliable. Futhermore, we did recommend to test other assumptions to ensure that if they are all met, then the model is indeed a good fit for the data.")
+
+
+```
+
+```{r}
+
+year_to_predict <- data.frame(yeardata=2001)
+predictions <- predict(modelforbond, newdata=year_to_predict, interval="predict")
+predictions
+
+# Assuming the number of at-bats in 2001 is 478 to calculate the predicted home runs
+at_bats_2001 <- 478
+predicted_hruns_lower <- predictions[,"lwr"] * at_bats_2001
+predicted_hruns_upper <- predictions[,"upr"] * at_bats_2001
+
+cat("Predicted Home Runs in 2001: Lower Bound =", predicted_hruns_lower, 
+    ", Upper Bound =", predicted_hruns_upper, "\n")
+
+
+cat("The prediction from our linear model indicates that if Barry Bonds had the same number of HRATs in 2001 as with previous years, then he would have between approximately 32 and 64 HRAT home runs. The model best guess is around 48 home runs. However, it is a statistical estimate and the actual number could be lower or even higher as shown in the predicted interval range provided.")
+
+
+```
+
+
+
+PART 2
+```{r}
+
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(stats)
+
+# Load the dataset
+traffic_data <- read_csv("Traffic_Incidents_20240127.csv")
+
+```
+
+```{r}
+#Display column names
+colnames(traffic_data)
+
+```
+
+<<<<<<< HEAD
+Q1:
+
+
+
+
+
+=======
+>>>>>>> acd60ac4ee088f6b3661d66c026ba24a3307504e
+
+Q2: What is the distribution of traffic incidents during the day, and is there a significant increase in the frequency of incidents during daytime hours (6am to 6pm) compared to nighttime hours (6pm to 6am)?
+```{r}
+
+#Formulating Hypothesis
+
+cat("Null Hypothesis (H0): There is no significant difference in the occurrences of traffic incidents that occur during the daytime (6am to 6pm) compared to the night-time (6pm to 6am)\n") 
+
+
+cat("\nAlternative Hypothesis (HA): There is a significant difference in the occurrences of traffic incidents that occur during the daytime (6am to 6pm) compared to the night-time (6pm to 6am)\n")
+
+```
+
+```{r}
+
+#Extract and categorize the information of the Time 
+q2explore <- traffic_data %>%
+  mutate(START_DT = ymd_hms(START_DT),
+         Hour = hour(START_DT),
+         TimeOfDay = if_else(Hour >= 6 & Hour < 18, "daytime", "nighttime"))
+q2explore
+
+summary_by_time_of_day <- table(q2explore$TimeOfDay)
+summary_by_time_of_day
+
+```
+
+
+```{r}
+
+#Remove all the NAs in the TimeOfDay 
+q2data_filtered <- q2explore %>%
+  filter(!is.na(TimeOfDay))
+
+#Visualize with bar plot
+ggplot(q2data_filtered, aes(x = TimeOfDay, fill = TimeOfDay)) + geom_bar() + labs(title = "Traffic Incidents Timing: Daytime vs Night-time", x = "Time of Day", y = "Number of Incidents") + scale_fill_manual(values = c("daytime" = "skyblue", "nighttime" = "black")) + theme_minimal()
+
+```
+
+
+```{r}
+
+#Aggregate incident counts by hour
+hourly_incidents <- q2explore %>%
+  group_by(Hour) %>%
+  summarise(IncidentCount = n()) %>%
+  ungroup()
+
+#Create a histogram of incidents by hour
+ggplot(hourly_incidents, aes(x = Hour, y = IncidentCount)) + geom_col(fill="red") + labs(title = "Frequency of Traffic Incidents by Hour", x = "Hour of Day", y = "Number of Incidents") + scale_x_continuous(breaks = 0:23) + theme_minimal()
+
+```
+
+```{r}
+
+#Statistical Testing using chi-square test to compare the observed counts of daytime and nighttime occurrence
+q2incident_table <- table(q2data_filtered$TimeOfDay)
+q2chisq_result <- chisq.test(q2incident_table)
+
+q2chisq_result
+
+```
+
+Interpretation of analysis:
+From the analysis of question 2 on traffic incidents based on time of the day, we were able to reveal that there is a significant difference in the frequency of traffic incidents that happens during the day hours of 6am to 6pm as compared to the night hours of 6pm to 6am. The analysis uncovered that during the day time, 31,934 incidents were recorded and 13,086 incidents were recorded during the night time. We went further to implement a chi-squared test statistic which gave us a value of 7890.9 and a p-value < 2.2e-16. Now based on these, we reject the null hypothesis as there is a significant difference in the frequency of incidents between the two time periods being compared.
+The significant results shows that indeed there is a strong relationship between the time of day and the occurrence of traffic incidents, with a statistical evidence of higher occurrences during the day. These insights would play a key role in informing traffic safety measures and policies geared at reducing the traffic occurrence incidents and impact of traffic-related issues during the hours identified as having higher incident rates.
+
+```{r}
+
+#Perform Linear Regression for q2
+#Are the coefficient estimates significant?
+
+#Hypothesis testing for significance of the model coefficients
+
+q2linear_model <- lm(IncidentCount ~ Hour, data = hourly_incidents)
+summary(q2linear_model)
+
+```
+
+$$ 
+IncidentCount = 987.58 + 77.24 \times Hour 
+$$
+
+Interpretation of the model:
+Intercept = 987.58: The model suggests that when the time is at the starting point (0 hours which happens to be 12am in this context), the model predicts there would be approximately 987.58 traffic incidents. This is the baseline number of incidents the model predicts regardless of the time of day.
+Slope = 77.24: For each additional hour, the model predicts an average increase of approximately 77.24 incidents. This value is the estimated number of additional incidents that occur with each passing hour.
+
+
+```{r}
+
+#Is there a linear relationship between Hour and IncidentCount?
+
+#Visualization through scatter plots
+
+ggplot(hourly_incidents, aes(x = Hour, y = IncidentCount)) + geom_point() + geom_smooth(method = "lm", color = "blue") + labs(title = "Scatter Plot of Incident Count vs Hour", x = "Hour", y = "Incident Count") + theme_minimal()
+
+```
+
+Interpretation of the plot:
+As the day progresses, we can see an upward trend of the blue line, reflecting the number of traffic accidents. This indicates that accidents are more frequent later in the day, which may correlate with increased traffic at that time. The gray area around the regression line serves as a confidence interval, allowing us to assess the accuracy of our estimates. The points within a wider range indicates a great variability in the number of incidents during those hours.
+Furthermore, the spread of data points around the regression line suggests that there may be other factors at play, beyond just the time of day, that contribute to the number of cases. The variance appears to increase hourly, suggesting possible heteroscedasticity—one violation of the linear regression assumption.Some data points are quite far from the regression line, indicating possible outliers that may affect the model and its accuracy.The plot also infers that simple linear regression may not fully capture the relationship between time and incident counts. This can be due to the non-linear nature of the relationship or the influence of other variables not included in the model as said earlier. Other factors such as weather, day of the week, population and traffic flow, when included in the model, can improve the model predictive power.
+
+```{r}
+#Correlation coefficient
+
+cor_result <- cor(hourly_incidents$Hour, hourly_incidents$IncidentCount, use = "complete.obs")
+print(cor_result)
+
+```
+
+Interpretation of the Correlation Coefficient:
+With an approximate correlation coefficient of 0.47, it suggests that there is a moderate positive correlation between the hour of the day and the number of traffic incidents. This means that as the hour increases, there tends to be an increase in the number of incidents, but the relationship is not strong. It infers that while time of day does have an influence, other factors may also play a significant role in the frequency of traffic incidents, which aligns with the interpretation of the scatterplot.
+
+```{r}
+
+#Create a new data frame with the 'Hour' column for which we want to make predictions
+#Lets say we want to predict the number of incidents for each hour of the day
+new_data <- data.frame(Hour = 0:23)
+
+predicted_incidents <- predict(q2linear_model, newdata = new_data)
+
+#Include the predictions to the new_data data frame
+new_data$PredictedIncidentCount <- predicted_incidents
+head(new_data, 5)
+
+```
+
+
+```{r}
+#Lets implement the prediction interval and predict the number of incidents for 8am and 5pm with prediction intervals
+prediction_hours <- data.frame(Hour = c(8, 17))
+prediction_with_interval <- predict(q2linear_model, newdata = prediction_hours, interval = "prediction")
+
+predict_hours <- cbind(prediction_hours, prediction_with_interval)
+print(predict_hours)
+
+```
+
+
+Interpretation:
+The prediction interval for 8am is vast and also captures negative values, which is not feasible in this context as we cannot have a negative incident count. This suggests a high variability and uncertainty in the prediction for this specific hour, and could have been influenced by outliers or non-linear relationship that is not being captured by the model.
+For the 5pm prediction, it is more precise, with both its lower and upper bounds capturing positive values and the interval being more narrow than that of the 8am. The interval suggests that while the model predicts somewhere about 2300 incidents, the actual number could reasonably fall between approximately 39 and 4562 incidents with a 95% confidence.
+
+
+Now lets check if the regression model meets all assumptions
+```{r}
+
+#Assumption 1: Normality Assumption(Using Q-Q plot)
+
+cat("Null Hypothesis (H0): The residuals are normally distributed")
+
+cat("\nAlternative Hypothesis (HA): The residuals are not normally distributed")
+
+ggplot(data.frame(Residuals = resid(q2linear_model)), aes(sample = Residuals)) + stat_qq() + stat_qq_line(colour = "red") + ggtitle("Normal Q-Q Plot of Residuals") + theme_minimal()
+
+```
+
+Interpretation of the Normal Q-Q Plot:
+The points follow the red line largely, indicating that the residuals are approximately normally distributed. But then, there are some deviations at the ends, suggesting the presence of outliers or slight deviations from normality in the tails. Thus we run another statistical test called Shapiro-Wilk test to investigate properly.
+
+```{r}
+
+# Perform the Shapiro-Wilk test for normality on the residuals
+shapiro_result <- shapiro.test(resid(q2linear_model))
+print(shapiro_result)
+
+```
+
+Interpretation of the Shapiro-Wilk test:
+The Shapiro-Wilk normality test on the residuals of our linear regression model gives us a test statistic of 0.97398 and a p-value of 0.7648 and given that the p-value is much larger than the threshold of 0.05, we fail to reject  the null hypothesis, suggesting that there is no statistical evidence to conclude that the residuals are not normally distributed. In other words, the normality assumption for our linear regression model is considered to be met based on this test.
+
+```{r}
+
+#Assumption 2: Equality of the variance of the residuals (Homoscedasticity)
+
+cat("Null Hypothesis (H0): There is the presence of homoscedasticity, which means that the variance of the residuals is constant across all levels of the independent variables")
+
+cat("\nAlternative Hypothesis (HA): There is the presence of heteroscedasticity, which means that the variance of the residuals is not constant across all levels of the independent variables")
+
+ggplot(data.frame(Fitted = fitted(q2linear_model), Residuals = resid(q2linear_model)), aes(x = Fitted, y = Residuals)) + geom_hline(yintercept = 0, colour = "red") + geom_point() + ggtitle("Residuals vs Fitted Values") + xlab("Fitted Values") + ylab("Residuals") + theme_minimal()
+
+```
+
+Interpretation of the Residuals vs Fitted Values Plot:
+The residuals do not show a particular pattern around the horizontal line at zero, which is good for homoscedasticity. But then, there are some spread in the residuals as the fitted values increase, which could hint at potential heteroscedasticity. Thus we run another statistical test called Breusch-Pagan test to better understand.
+
+```{r}
+
+library(lmtest)
+
+# Perform the Breusch-Pagan test
+bp_result <- bptest(q2linear_model)
+print(bp_result)
+
+```
+Interpretation of the BP test:
+From the result of the Breusch-Pagan test which gave a p-value of 0.01086, we reject the null hypothesis and conclude that the equality of variance assumption (homoscedasticity) is not met by our regression model. Furthermore, it indicates that there is significant heteroscedasticity, meaning the variance of the residuals is not constant across the range of fitted values. This could potentially affect the validity of some of the statistical tests and confidence intervals derived from our model.
+
+```{r}
+
+#Assumption 3: Independence Assumption (Using the Durbin-Watson test)
+
+cat("Null Hypothesis (H0): The residuals are independent")
+
+cat("\nAlternative Hypothesis (HA): The residuals are not independent")
+
+
+ind_test <- dwtest(q2linear_model)
+print(ind_test)
+
+```
+
+Interpretation of Independence Assumption Test:
+From the Durbin-Watson test result that gave a DW statistic of 0.26207 and a significant p-value of 1.155e-10, we have a statistical evidence to reject the null hypothesis and conclude that the residuals are not independent. That means that the independence assumption is not met by our model. It simply means, how far off one prediction is can predict how far off the next prediction will be, which would affect the reliability of our model's predictions and conclusions which is evident in the prediction values been off.
+
+
+
+**Q2 Conclusion**
+
+This educative analysis of traffic incident data, focusing on the relationship between the time of day (Hour) and the number of incidents (IncidentCount), has yielded several key findings and insights, such as:
+
+1. Significant Time of Day Effect: The initial analysis supported the hypothesis that the time of day significantly has an effect on the number of traffic incidents, with more incidents occurring during the daytime compared to nighttime. This suggests that policies and interventions targeting traffic safety should consider time-of-day variations in traffic volume and incident rates.
+
+2. Model Evaluations and Assumptions Testing:
+   (a) Linearity: The positive correlation between the hour of the day and the number of incidents, along with the linear regression model, suggested a linear relationship. However, the analysis also pointed to the potential need for a more sophisticated model by the addition of other variables in order to capture the occurrence of traffic incidents.
+   
+  (b) Independence: The Durbin-Watson tests indicated that there is a significant autocorrelation in the residuals, violating the independence assumption of linear regression. This suggests that consecutive time periods might be related, affecting the reliability of the model's predicting power.
+  
+  (c) Normality Assumption: The Shapiro-Wilk test showed that the residuals from the regression model were approximately normally distributed, meeting one of the key assumptions necessary for reliable regression analysis.
+  
+  (d)Homoscedasticity Assumption: Using the Breusch-Pagan test, it revealed the evidence of heteroscedasticity, indicating that the variance of the residuals is not constant across all levels of the independent variable and this could impact the precision of the estimated coefficients.
+
+3. Implications and Recommendations for both authorities and road users:
+   (a) The insights gotten highlight how many various elements could affect traffic incidents and show why it is important to think about how these incidents change at different times of the day when making plans for traffic safety by the authorities and road users.
+   (b) Addressing autocorrelation and heteroscedasticity in the model suggests the need for more advanced modeling techniques, such as a model that can account for variable variance and autocorrelation.
+   (c) Including additional explanatory variables (e.g., weather conditions, day of the week, traffic flow) could improve the model's prediction accuracy.
+
+4. Conclusion: The extensive analysis confirms the significant impact of the time of day on traffic incidents and highlights the importance of a rigorous model evaluation. Future work should focus on refining the model to better understand the factors influencing traffic incidents and to develop more effective traffic management and safety interventions. The violations of key regression assumptions indicate that more complex statistical methods may be necessary to accurately model and predict traffic incident patterns.
+
+
+
+
+
+
